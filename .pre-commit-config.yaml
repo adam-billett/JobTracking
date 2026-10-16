@@ -18,7 +18,7 @@ repos:
       - id: check-added-large-files      # block accidental huge files (>500KB)
       - id: detect-private-key           # block committed private keys
       - id: no-commit-to-branch          # never commit directly to these
-        args: [--branch, main, --branch, develop]
+        args: [--branch, production, --branch, develop]
 
   # ── Commit message format (Conventional Commits) ─────────────────────────────
   - repo: https://github.com/compilerla/conventional-pre-commit

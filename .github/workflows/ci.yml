@@ -3,7 +3,7 @@ name: CI
 on:
   push:                               # every push to any branch
   pull_request:
-    branches: [develop, main]         # and every PR targeting these
+    branches: [develop, production]         # and every PR targeting these
 
 permissions:
   contents: read                      # least privilege: CI only needs to read code
