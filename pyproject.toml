@@ -54,7 +54,7 @@ select = [
 # ── Mypy: type checking ───────────────────────────────────────────────────────
 [tool.mypy]
 strict = true                       # every function typed, no silent `Any`
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
 warn_unreachable = true
 
 # ── Pytest ────────────────────────────────────────────────────────────────────
