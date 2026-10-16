@@ -1,0 +1,75 @@
+# ── Project identity (like the top of a .csproj) ──────────────────────────────
+[project]
+name = "jobhunt"
+version = "0.1.0"
+description = "Personal job search helper: best-fit job picks + application tracking"
+readme = "README.md"
+requires-python = ">=3.13"          # refuse to install on older Python
+dependencies = []                   # runtime libraries; empty until we need one (httpx, pydantic...)
+
+# ── Development-only tools (like test/analyzer NuGet packages) ────────────────
+# Not shipped with the app; installed by `uv sync` for working on it.
+[dependency-groups]
+dev = [
+    "pytest>=8",          # test runner
+    "pytest-cov>=6",      # code coverage
+    "ruff>=0.8",          # formatter + linter (replaces black, isort, flake8...)
+    "mypy>=1.13",         # static type checker
+    "pre-commit>=4",      # runs the checks on every commit
+]
+
+# ── How to package the code ───────────────────────────────────────────────────
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jobhunt"]          # the app code lives under src/
+
+# ── Ruff: formatting + linting ────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+# Each code is a family of rules. Start strict now; it's painful to add later.
+select = [
+    "E", "W",   # pycodestyle: basic style errors/warnings
+    "F",        # pyflakes: unused imports/variables, undefined names
+    "I",        # isort: import ordering
+    "B",        # bugbear: likely bugs (mutable default args, etc.)
+    "UP",       # pyupgrade: use modern Python syntax
+    "SIM",      # simplify: needlessly complex code
+    "N",        # pep8-naming: naming conventions
+    "C4",       # comprehensions: cleaner list/dict building
+    "PT",       # pytest style
+    "PTH",      # use pathlib instead of os.path
+    "S",        # bandit: security issues (hardcoded passwords, unsafe calls)
+    "RUF",      # ruff's own extra checks
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]               # `assert` is how tests work; allow it there only
+
+# ── Mypy: type checking ───────────────────────────────────────────────────────
+[tool.mypy]
+strict = true                       # every function typed, no silent `Any`
+files = ["src", "tests"]
+warn_unreachable = true
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"  # summary of skips/fails; typos in config = error
+markers = [
+    "live: hits real external services (job boards, Claude, Discord); never run in CI",
+]
+
+# ── Coverage ──────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["jobhunt"]
+branch = true                       # count if/else branches, not just lines
+
+[tool.coverage.report]
+show_missing = true
+# fail_under = 90                   # switch on once real code exists (M1)
