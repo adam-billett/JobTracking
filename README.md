@@ -33,8 +33,8 @@ uv run pre-commit install    # switches on the commit / commit-msg / pre-push ch
 - Never commit directly to `develop` or `production` (blocked by the hooks).
 
 ## Configuration
-Copy the templates below. Note: configuration is still being built out — these templates are placeholders and don’t yet contain usable settings:
+Copy the templates below. Configuration is still being built out — these are placeholders and don't yet contain usable settings.
 ```powershell
-[ -f config.yaml ] || cp config.example.yaml config.yaml
-[ -f .env ] || cp .env.example .env
+if (-not (Test-Path config.yaml)) { Copy-Item config.example.yaml config.yaml }
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```

@@ -47,7 +47,16 @@ jobs:
       - name: Check PR branch follows type/short-description
         env:
           BRANCH: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
+          # Allow the develop -> production promotion PR (same repo only);
+          # it legitimately has a non-type/ source branch.
+          if [[ "$BRANCH" == "develop" && "$BASE" == "production" && "$HEAD_REPO" == "$REPO" ]]; then
+            echo "Promotion PR (develop -> production) — skipping branch-name check."
+            exit 0
+          fi
           if [[ ! "$BRANCH" =~ ^(feature|fix|chore|docs|refactor|test|ci|build)/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
             echo "::error::Branch '$BRANCH' must match type/short-description"
             exit 1
