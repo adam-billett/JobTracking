@@ -167,7 +167,7 @@ tests/
 
 | When | Check | Blocks? |
 |---|---|---|
-| `git commit` | Format, lint, types, commit message, branch name, no secrets | Yes |
+| `git commit` | Format, lint, types, commit message, branch name, private-key detection | Yes |
 | `git push` | Unit tests | Yes |
 | On GitHub | Full checks on a clean machine (CI) | Marks the PR red |
 | Merge | PR required; CI must pass (branch protection) | Yes |
