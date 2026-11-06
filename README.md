@@ -18,9 +18,9 @@ uv run pre-commit install    # switches on the commit / commit-msg / pre-push ch
 ## Everyday commands
 | Task | Command |
 |---|---|
-| Run all checks on every file | `uv run pre-commit run --all-files` |
+| Run all pre-commit checks on every file | `uv run pre-commit run --all-files` |
 | Fast unit tests | `uv run pytest tests/unit` |
-| All tests with coverage | `uv run pytest --cov` |
+| All tests with coverage | `uv run pytest --cov -m "not live"` |
 | Format code | `uv run ruff format` |
 | Lint (auto-fix) | `uv run ruff check --fix` |
 | Type check | `uv run mypy` |

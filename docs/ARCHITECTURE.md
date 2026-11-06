@@ -65,7 +65,7 @@ A personal, single-user job search helper. It finds the jobs I have the best cha
 **Rules**
 1. `domain/` imports nothing from other layers and does no I/O.
 2. `application/` depends only on `domain/` and `ports/`, never on a concrete adapter.
-3. `adapters/` implement `ports/`; they are the only code that touches the network, disk, or external services.
+3. 3. `adapters/` implement `ports/`; they are the only code that touches the network, disk, or external services. Configuration loading (reading config.yaml / .env) is treated as an adapter concern and lives at this boundary.
 4. `cli/` is thin: no business logic.
 5. Dependencies are passed in through constructors and wired in `bootstrap.py`.
 
@@ -91,7 +91,7 @@ fetch (all sources) → save new / skip duplicates → filter by profile
 ## 4. Folder structure
 
 ```
-.github/workflows/ci.yml      CI: format, lint, types, tests on every push/PR
+.github/workflows/ci.yml   CI: format, lint, types, tests on every push, and on PRs targeting develop/production
 docs/ARCHITECTURE.md          this document
 docs/adr/                     one file per significant decision
 scripts/                      developer tools (e.g. branch-name check), not app code

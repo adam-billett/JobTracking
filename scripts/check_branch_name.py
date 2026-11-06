@@ -6,7 +6,7 @@ import sys
 
 ALLOWED_TYPES = ("feature", "fix", "chore", "docs", "refactor", "test", "ci", "build")
 PATTERN = re.compile(rf"^({'|'.join(ALLOWED_TYPES)})/[a-z0-9]+(-[a-z0-9]+)*$")
-# main/develop are guarded by no-commit-to-branch; HEAD = detached (mid-rebase)
+# production/develop are guarded by no-commit-to-branch; HEAD = detached (mid-rebase)
 EXEMPT = {"production", "develop", "HEAD"}
 
 
