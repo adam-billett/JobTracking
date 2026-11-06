@@ -3,3 +3,14 @@
 ################################################################################
 
 /.vs/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+config.yaml
+resume.md
+data/
+__pycache__/

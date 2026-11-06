@@ -1,0 +1,67 @@
+# Install once per clone:  uv run pre-commit install
+# Runs automatically on `git commit` (and some hooks on `git push`).
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  # ── Generic housekeeping hooks (maintained by the pre-commit project) ────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace          # strip spaces at line ends
+      - id: end-of-file-fixer            # files end with exactly one newline
+      - id: mixed-line-ending            # no Windows/Unix line-ending mix
+        args: [--fix=lf]
+      - id: check-yaml                   # YAML files are valid
+      - id: check-toml                   # TOML files are valid
+      - id: check-merge-conflict         # no leftover <<<<<<< markers
+      - id: check-added-large-files      # block accidental huge files (>500KB)
+      - id: detect-private-key           # block committed private keys
+      - id: no-commit-to-branch          # never commit directly to these
+        args: [--branch, production, --branch, develop]
+
+  # ── Commit message format (Conventional Commits) ─────────────────────────────
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
+
+  # ── Project tools, run through uv so versions match uv.lock and CI exactly ───
+  - repo: local
+    hooks:
+      - id: branch-name
+        name: branch name follows type/short-description
+        entry: uv run python scripts/check_branch_name.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]
+
+      - id: ruff-lint
+        name: ruff lint
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        pass_filenames: false            # check the whole project, not just changed files
+        always_run: true
+        types_or: [python, pyi]
+
+      - id: unit-tests
+        name: unit tests (before push)
+        entry: uv run pytest tests/unit -q
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]               # too slow for every commit; fast enough for every push
