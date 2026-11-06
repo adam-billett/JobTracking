@@ -1,6 +1,6 @@
 # JobTracking
 
-Personal job search helper: finds the jobs I'm most likely to hear back from, sends me the top picks on Discord, and tracks every application.
+Personal job search helper (in development): will find the jobs I'm most likely to hear back from, send me the top picks on Discord, and track every application. These features are planned and not yet functional.
 
 - Design and decisions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Work items: GitHub issues `JT-<n>` on the project board
@@ -33,8 +33,8 @@ uv run pre-commit install    # switches on the commit / commit-msg / pre-push ch
 - Never commit directly to `develop` or `production` (blocked by the hooks).
 
 ## Configuration
-Copy the templates and fill in your own values (both copies are git-ignored):
+Copy the templates below. Note: configuration is still being built out — these templates are placeholders and don’t yet contain usable settings:
 ```powershell
-Copy-Item config.example.yaml config.yaml
-Copy-Item .env.example .env
+[ -f config.yaml ] || cp config.example.yaml config.yaml
+[ -f .env ] || cp .env.example .env
 ```
