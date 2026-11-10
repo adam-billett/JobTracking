@@ -1,0 +1,55 @@
+"""
+Configuration loading.
+
+Reads config.yaml (settings; git-ignored) into a validated Settings
+object. Per ARCHITECTURE.md this is treated as an adapter concern — it's
+the boundary code that touches the disk — so the rest of the app receives
+a plain validated object and never reads files itself.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+class ConfigError(Exception):
+    """Raised when configuration is missing or invalid."""
+
+
+@dataclass(frozen=True)
+class Settings:
+    companies: list[str]  # Greenhouse board tokens, e.g. ["stripe", "anthropic"]
+    database_path: str
+
+
+def load_settings(config_path: Path) -> Settings:
+    """
+    Load and validate settings from a YAML file.
+
+    Raises ConfigError with an actionable message if the file is missing or
+    a required field is absent, so a misconfigured run fails clearly at
+    startup rather than midway through.
+    """
+    if not config_path.exists():
+        raise ConfigError(
+            f"Config file not found at {config_path}. "
+            "Copy config.example.yaml to config.yaml and fill it in."
+        )
+
+    with config_path.open(encoding="utf-8") as f:
+        raw: dict[str, Any] = yaml.safe_load(f) or {}
+
+    companies = raw.get("companies")
+    if not isinstance(companies, list) or not companies:
+        raise ConfigError("config.yaml must list at least one company under 'companies'.")
+
+    database_path = raw.get("database_path", "data/jobs.db")
+
+    return Settings(
+        companies=[str(c) for c in companies],
+        database_path=str(database_path),
+    )

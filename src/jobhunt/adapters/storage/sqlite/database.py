@@ -23,6 +23,12 @@ def connect(database_path: str) -> sqlite3.Connection:
     in-memory database (used by tests). Rows are returned as sqlite3.Row
     so the repository can read columns by name rather than by position.
     """
+    # Ensure the parent directory exists — SQLite creates the file but not
+    # the folder, so a path like "data/jobs.db" fails on a fresh checkout
+    # until data/ exists. ":memory:" has no parent, so skip it.
+    if database_path != ":memory:":
+        Path(database_path).parent.mkdir(parents=True, exist_ok=True)
+
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     _apply_migrations(connection)

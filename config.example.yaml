@@ -1,0 +1,12 @@
+# Copy this file to config.yaml and fill in your own values.
+# config.yaml is git-ignored; this .example template is committed.
+
+# Greenhouse board tokens for the companies you want to track.
+# The token is the slug in a company's board URL:
+# https://boards.greenhouse.io/<token>
+companies:
+  - stripe
+  - anthropic
+
+# Where the local SQLite database is stored.
+database_path: data/jobs.db

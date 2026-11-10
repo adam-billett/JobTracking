@@ -7,6 +7,7 @@ readme = "README.md"
 requires-python = ">=3.13"          # refuse to install on older Python
 dependencies = [
     "httpx>=0.28.1",
+    "pyyaml>=6.0.3",
 ]                   # runtime libraries; empty until we need one (httpx, pydantic...)
 
 # ── Development-only tools (like test/analyzer NuGet packages) ────────────────
@@ -18,6 +19,7 @@ dev = [
     "ruff>=0.8",          # formatter + linter (replaces black, isort, flake8...)
     "mypy>=1.13",         # static type checker
     "pre-commit>=4",      # runs the checks on every commit
+    "types-pyyaml>=6.0.12.20261103",
 ]
 
 # ── How to package the code ───────────────────────────────────────────────────
