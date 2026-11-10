@@ -5,7 +5,9 @@ version = "0.1.0"
 description = "Personal job search helper: best-fit job picks + application tracking"
 readme = "README.md"
 requires-python = ">=3.13"          # refuse to install on older Python
-dependencies = []                   # runtime libraries; empty until we need one (httpx, pydantic...)
+dependencies = [
+    "httpx>=0.28.1",
+]                   # runtime libraries; empty until we need one (httpx, pydantic...)
 
 # ── Development-only tools (like test/analyzer NuGet packages) ────────────────
 # Not shipped with the app; installed by `uv sync` for working on it.
