@@ -34,3 +34,11 @@ def test_valid_config_loads(tmp_path: Path) -> None:
     settings = load_settings(config)
     assert settings.companies == ["stripe"]
     assert settings.database_path == "data/jobs.db"
+
+
+def test_null_company_entry_raises_config_error(tmp_path: Path) -> None:
+    config = tmp_path / "config.yaml"
+    # The empty "-" entry parses as null (None) in YAML.
+    config.write_text("companies:\n  - stripe\n  -\n", encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_settings(config)

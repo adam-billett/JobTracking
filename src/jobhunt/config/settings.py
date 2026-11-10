@@ -52,6 +52,8 @@ def load_settings(config_path: Path) -> Settings:
     companies = raw.get("companies")
     if not isinstance(companies, list) or not companies:
         raise ConfigError("config.yaml must list at least one company under 'companies'.")
+    if any(c is None or isinstance(c, dict) for c in companies):
+        raise ConfigError("Company entries must be board tokens, not null or mappings.")
 
     database_path = raw.get("database_path", "data/jobs.db")
 
