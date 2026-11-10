@@ -106,7 +106,9 @@ class TestListCommand:
         capsys.readouterr()
         cli_main.main(["list"])
 
-        assert "Engineer" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "Engineer" in out
+        assert "2026-01-01" in out
 
     def test_list_empty_when_nothing_stored(
         self,

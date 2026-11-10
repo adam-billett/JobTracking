@@ -67,3 +67,20 @@ class TestFetchJobs:
         fake = FakeHttpClient(payload=["not", "a", "dict"])
         with pytest.raises(JobSourceError):
             GreenhouseJobSource(fake).fetch_jobs("stripe")
+
+    def test_non_json_body_becomes_job_source_error(self) -> None:
+        # A 200 with a non-JSON body makes get_json raise ValueError
+        # (json.JSONDecodeError subclasses it) — must map to JobSourceError.
+        fake = FakeHttpClient(error=ValueError("Expecting value: line 1 column 1"))
+        with pytest.raises(JobSourceError) as exc_info:
+            GreenhouseJobSource(fake).fetch_jobs("stripe")
+        assert exc_info.value.company == "stripe"
+
+    def test_malformed_job_data_becomes_job_source_error(self) -> None:
+        # A job missing a required key (here "id") raises KeyError in
+        # parsing — must map to JobSourceError, not propagate.
+        payload = {"jobs": [{"title": "Engineer", "absolute_url": "https://x/1"}]}
+        fake = FakeHttpClient(payload=payload)
+        with pytest.raises(JobSourceError) as exc_info:
+            GreenhouseJobSource(fake).fetch_jobs("stripe")
+        assert exc_info.value.company == "stripe"

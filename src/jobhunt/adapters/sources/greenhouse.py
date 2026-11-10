@@ -37,10 +37,13 @@ class GreenhouseJobSource:
         url = f"{_BASE_URL}/{company}/jobs"
         try:
             payload = self._http.get_json(url)
-        except httpx.HTTPError as exc:
+        except (httpx.HTTPError, ValueError) as exc:
             raise JobSourceError(company, f"request failed: {exc}") from exc
 
         if not isinstance(payload, dict):
             raise JobSourceError(company, "unexpected response shape (expected an object)")
 
-        return _parsing.parse_jobs(company, payload)
+        try:
+            return _parsing.parse_jobs(company, payload)
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise JobSourceError(company, f"malformed job data: {exc!r}") from exc

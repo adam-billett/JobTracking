@@ -64,6 +64,7 @@ def _list(app: Application) -> int:
     print(f"{len(jobs)} job(s) stored:\n")
     for job in jobs:
         location = job.location or "—"
-        print(f"  {job.title}  @ {job.company}  ({location})")
+        posted = job.posted_at.date().isoformat() if job.posted_at else "—"
+        print(f"  {job.title}  @ {job.company}  ({location})  posted {posted}")
         print(f"    {job.url}")
     return 0

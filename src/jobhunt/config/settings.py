@@ -41,7 +41,13 @@ def load_settings(config_path: Path) -> Settings:
         )
 
     with config_path.open(encoding="utf-8") as f:
-        raw: dict[str, Any] = yaml.safe_load(f) or {}
+        try:
+            loaded = yaml.safe_load(f) or {}
+        except yaml.YAMLError as exc:
+            raise ConfigError(f"Config file {config_path} is not valid YAML: {exc}") from exc
+    if not isinstance(loaded, dict):
+        raise ConfigError(f"Config file {config_path} must contain a mapping at the top level.")
+    raw: dict[str, Any] = loaded
 
     companies = raw.get("companies")
     if not isinstance(companies, list) or not companies:
