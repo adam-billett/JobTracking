@@ -10,6 +10,10 @@ dependencies = [
     "pyyaml>=6.0.3",
 ]                   # runtime libraries; empty until we need one (httpx, pydantic...)
 
+# ── Console command (creates the `jobhunt` command on install) ────────────────
+[project.scripts]
+jobhunt = "jobhunt.cli.main:main"
+
 # ── Development-only tools (like test/analyzer NuGet packages) ────────────────
 # Not shipped with the app; installed by `uv sync` for working on it.
 [dependency-groups]
