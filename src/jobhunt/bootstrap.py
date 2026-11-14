@@ -15,8 +15,11 @@ from jobhunt.adapters.http.client import HttpxClient
 from jobhunt.adapters.sources.greenhouse import GreenhouseJobSource
 from jobhunt.adapters.storage.sqlite.database import connect
 from jobhunt.adapters.storage.sqlite.repository import SqliteJobRepository
+from jobhunt.adapters.system_clock import SystemClock
 from jobhunt.application.fetch_jobs import FetchJobsService
+from jobhunt.application.track_application import TrackApplicationService
 from jobhunt.config.settings import Settings
+from jobhunt.ports.clock import Clock
 from jobhunt.ports.job_source import JobSource
 
 
@@ -25,27 +28,32 @@ class Application:
     """The wired-up application: use cases plus the settings they run with."""
 
     fetch_jobs: FetchJobsService
-    repository: SqliteJobRepository
+    track: TrackApplicationService
     settings: Settings
 
 
-def build_application(settings: Settings, source: JobSource | None = None) -> Application:
+def build_application(
+    settings: Settings,
+    *,
+    source: JobSource | None = None,
+    clock: Clock | None = None,
+) -> Application:
     """
     Wire concrete adapters into the use cases and return them ready to run.
 
-    `source` defaults to the real Greenhouse source; tests pass a fake to
-    exercise the CLI end-to-end without hitting the network. This is the
-    one seam the composition root exposes for that purpose.
+    `source` and `clock` default to the real ones; end-to-end tests pass a
+    fake source and a fixed clock so they run without the network and with
+    a predictable "now".
     """
     if source is None:
-        http = HttpxClient()
-        source = GreenhouseJobSource(http)
+        source = GreenhouseJobSource(HttpxClient())
+    if clock is None:
+        clock = SystemClock()
 
-    connection = connect(settings.database_path)
-    repository = SqliteJobRepository(connection)
+    repository = SqliteJobRepository(connect(settings.database_path))
 
     return Application(
         fetch_jobs=FetchJobsService(source, repository),
-        repository=repository,
+        track=TrackApplicationService(repository, clock),
         settings=settings,
     )

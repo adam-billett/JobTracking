@@ -1,23 +1,27 @@
 """
 End-to-end CLI tests.
 
-Drives the real CLI (argument parsing, command dispatch, output) against a
-fixture source and a temp SQLite database — no network. Uses the
-build_application source seam to inject a fake Greenhouse, so these verify
-the whole wired path from `jobhunt run`/`list` down to storage and back.
+Drive the real CLI (argument parsing, command dispatch, output, exit codes)
+against a real config file and a temp SQLite database. The only fakes are
+the job source (no network) and the clock (a predictable "now"), passed in
+through main()'s `build` argument.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from jobhunt.bootstrap import build_application
-from jobhunt.cli import main as cli_main
+from jobhunt.bootstrap import Application, build_application
+from jobhunt.cli.main import main
 from jobhunt.config.settings import Settings
 from jobhunt.domain.job import Job
+
+# Midday UTC, so the local date is the same in any US timezone.
+NOW = datetime(2026, 11, 13, 17, 0, tzinfo=UTC)
 
 
 class FakeJobSource:
@@ -30,6 +34,11 @@ class FakeJobSource:
         return self._jobs_by_company.get(company, [])
 
 
+class FixedClock:
+    def now(self) -> datetime:
+        return NOW
+
+
 def _job(external_id: str) -> Job:
     return Job.create(
         source="greenhouse",
@@ -38,86 +47,150 @@ def _job(external_id: str) -> Job:
         title="Engineer",
         url=f"https://example.com/{external_id}",
         location="Remote",
-        posted_at=datetime.fromisoformat("2026-01-01T00:00:00-05:00"),
+        posted_at=datetime.fromisoformat("2026-01-01T12:00:00-05:00"),
     )
 
 
+def _builder(jobs: list[Job]) -> Callable[[Settings], Application]:
+    source = FakeJobSource({"acme": jobs})
+
+    def build(settings: Settings) -> Application:
+        return build_application(settings, source=source, clock=FixedClock())
+
+    return build
+
+
 @pytest.fixture
-def settings(tmp_path: Path) -> Settings:
-    # tmp_path is pytest's per-test temp dir — the DB is created there and
-    # cleaned up automatically, so tests never touch the real data/ folder.
-    return Settings(companies=["acme"], database_path=str(tmp_path / "jobs.db"))
+def config_path(tmp_path: Path) -> Path:
+    # A real config file pointing at a temp database, so tests never touch
+    # the real config.yaml or data/ folder.
+    database = (tmp_path / "jobs.db").as_posix()
+    path = tmp_path / "config.yaml"
+    path.write_text(f'companies:\n  - acme\ndatabase_path: "{database}"\n', encoding="utf-8")
+    return path
 
 
-def _patch_source(monkeypatch: pytest.MonkeyPatch, source: FakeJobSource) -> None:
-    # Make the CLI's build_application use our fake source. We wrap the real
-    # function, injecting the fake, so the rest of the wiring stays real.
-    original = build_application
-
-    def _build_with_fake(settings: Settings, source_override=None):  # type: ignore[no-untyped-def]
-        return original(settings, source=source)
-
-    monkeypatch.setattr(cli_main, "build_application", _build_with_fake)
+def _cli(config_path: Path, jobs: list[Job], *args: str) -> int:
+    return main(["--config", str(config_path), *args], build=_builder(jobs))
 
 
-class TestRunCommand:
-    def test_run_reports_found_and_new(
-        self,
-        settings: Settings,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+class TestRun:
+    def test_reports_found_and_new(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        _patch_source(monkeypatch, FakeJobSource({"acme": [_job("1"), _job("2")]}))
-        monkeypatch.setattr(cli_main, "load_settings", lambda _path: settings)
-
-        exit_code = cli_main.main(["run"])
-
-        assert exit_code == 0
-        out = capsys.readouterr().out
-        assert "Found 2 job(s); 2 new." in out
+        assert _cli(config_path, [_job("1"), _job("2")], "run") == 0
+        assert "Found 2 job(s); 2 new." in capsys.readouterr().out
 
     def test_second_run_reports_zero_new(
-        self,
-        settings: Settings,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        _patch_source(monkeypatch, FakeJobSource({"acme": [_job("1")]}))
-        monkeypatch.setattr(cli_main, "load_settings", lambda _path: settings)
+        jobs = [_job("1")]
+        _cli(config_path, jobs, "run")
+        capsys.readouterr()  # clear the first run's output
 
-        cli_main.main(["run"])
-        capsys.readouterr()  # clear first run's output
-        cli_main.main(["run"])
+        _cli(config_path, jobs, "run")
 
         assert "0 new." in capsys.readouterr().out
 
 
-class TestListCommand:
-    def test_list_shows_stored_jobs(
-        self,
-        settings: Settings,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+class TestList:
+    def test_shows_short_id_status_and_posted_date(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        _patch_source(monkeypatch, FakeJobSource({"acme": [_job("1")]}))
-        monkeypatch.setattr(cli_main, "load_settings", lambda _path: settings)
-
-        cli_main.main(["run"])
+        job = _job("1")
+        _cli(config_path, [job], "run")
         capsys.readouterr()
-        cli_main.main(["list"])
+
+        _cli(config_path, [job], "list")
 
         out = capsys.readouterr().out
+        assert job.id[:8] in out
+        assert "[new]" in out
         assert "Engineer" in out
         assert "2026-01-01" in out
 
-    def test_list_empty_when_nothing_stored(
-        self,
-        settings: Settings,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
+    def test_empty_when_nothing_stored(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        monkeypatch.setattr(cli_main, "load_settings", lambda _path: settings)
-
-        cli_main.main(["list"])
-
+        _cli(config_path, [], "list")
         assert "No jobs stored yet." in capsys.readouterr().out
+
+
+class TestApply:
+    def test_marks_applied_with_link_and_date(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        job = _job("1")
+        _cli(config_path, [job], "run")
+
+        exit_code = _cli(config_path, [job], "apply", job.id[:8], "--link", "https://x/status")
+        capsys.readouterr()
+        _cli(config_path, [job], "show", job.id[:8])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "applied" in out
+        assert "2026-11-13" in out
+        assert "https://x/status" in out
+
+    def test_applying_twice_is_refused(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        job = _job("1")
+        _cli(config_path, [job], "run")
+        _cli(config_path, [job], "apply", job.id[:8])
+        capsys.readouterr()
+
+        exit_code = _cli(config_path, [job], "apply", job.id[:8])
+
+        assert exit_code == 1
+        assert "Already applied" in capsys.readouterr().err
+
+    def test_unknown_job_says_not_found(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        _cli(config_path, [_job("1")], "run")
+        capsys.readouterr()
+
+        exit_code = _cli(config_path, [_job("1")], "apply", "zzzzzzzz")
+
+        assert exit_code == 1
+        assert "No job found" in capsys.readouterr().err
+
+
+class TestUpdateAndNote:
+    def test_update_needs_link_or_contact(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        job = _job("1")
+        _cli(config_path, [job], "run")
+        capsys.readouterr()
+
+        assert _cli(config_path, [job], "update", job.id[:8]) == 1
+        assert "--link" in capsys.readouterr().err
+
+    def test_update_saves_contact(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        job = _job("1")
+        _cli(config_path, [job], "run")
+        _cli(config_path, [job], "update", job.id[:8], "--contact", "Dana")
+        capsys.readouterr()
+
+        _cli(config_path, [job], "show", job.id[:8])
+
+        assert "Dana" in capsys.readouterr().out
+
+    def test_note_is_shown_with_its_date(
+        self, config_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        job = _job("1")
+        _cli(config_path, [job], "run")
+        _cli(config_path, [job], "note", job.id[:8], "Recruiter replied")
+        capsys.readouterr()
+
+        _cli(config_path, [job], "show", job.id[:8])
+
+        out = capsys.readouterr().out
+        assert "Recruiter replied" in out
+        assert "2026-11-13" in out
