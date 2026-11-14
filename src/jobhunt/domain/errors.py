@@ -59,3 +59,11 @@ class EmptyNoteError(JobHuntError):
 
     def __init__(self) -> None:
         super().__init__("A note needs some text.")
+
+
+class JobNotFoundError(JobHuntError):
+    """Raised when a job reference matches no stored job."""
+
+    def __init__(self, reference: str) -> None:
+        self.reference = reference
+        super().__init__(f"No job found for '{reference}'.")
