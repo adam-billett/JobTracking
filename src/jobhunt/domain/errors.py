@@ -67,3 +67,14 @@ class JobNotFoundError(JobHuntError):
     def __init__(self, reference: str) -> None:
         self.reference = reference
         super().__init__(f"No job found for '{reference}'.")
+
+
+class AmbiguousJobReferenceError(JobHuntError):
+    """Raised when a short job id matches more than one stored job."""
+
+    def __init__(self, reference: str, matches: list[str]) -> None:
+        self.reference = reference
+        self.matches = matches
+        super().__init__(
+            f"'{reference}' matches {len(matches)} jobs; type more characters of the id."
+        )
